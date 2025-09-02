@@ -1,0 +1,25 @@
+query RunInput {
+  cart {
+    lines {
+      id
+      quantity
+      type: attribute(key: "_type") {
+        key
+        value
+      }
+      giftbox: attribute(key: "_giftbox") {
+        key
+        value
+      }
+      merchandise {
+        __typename
+        ... on ProductVariant {
+          title
+          product {
+            title
+          }
+        }
+      }
+    }
+  }
+}

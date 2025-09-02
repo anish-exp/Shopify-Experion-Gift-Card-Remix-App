@@ -1,0 +1,49 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "a3ddc94d5af878a08c14ca885bb1c972"
+name = "Gift Card App"
+handle = "gift-card-app-38"
+application_url = "https://intermediate-proteins-counted-belfast.trycloudflare.com"
+embedded = true
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2025-07"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "orders/create" ]
+  uri = "/webhooks/app/create_physical_gift_card"
+
+  [[webhooks.subscriptions]]
+  topics = [ "products/create", "products/update" ]
+  uri = "/webhooks/app/hide_gift_hamper_product"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_products, write_products, write_gift_cards, read_customers, read_orders, write_orders"
+
+[auth]
+redirect_urls = [
+  "https://intermediate-proteins-counted-belfast.trycloudflare.com/auth/callback",
+  "https://intermediate-proteins-counted-belfast.trycloudflare.com/auth/shopify/callback",
+  "https://intermediate-proteins-counted-belfast.trycloudflare.com/api/auth/callback"
+]
+
+[pos]
+embedded = false
+
+[app_proxy]
+prefix = "apps"
+subpath = "gift-card"
+url = "https://intermediate-proteins-counted-belfast.trycloudflare.com/api/giftcard"
