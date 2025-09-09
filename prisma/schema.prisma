@@ -31,8 +31,11 @@ model Session {
   emailVerified Boolean?  @default(false)
 }
 
-model Shop {
-  id             String  @id @default(cuid())
-  shopDomain     String  @unique
-  onboardingDone Boolean @default(false)
+model SetupProgress {
+  shop              String    @id   @unique
+  appBlockDone      Boolean   @default(false)
+  productTypeDone   Boolean   @default(false)
+  checkoutRuleDone  Boolean   @default(false)
+  collectionDone    Boolean   @default(false)
+  isComplete        Boolean   @default(false)
 }

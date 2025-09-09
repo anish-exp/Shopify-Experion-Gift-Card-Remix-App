@@ -3,6 +3,7 @@ api_version = "2025-01"
 [[extensions]]
 name = "t:name"
 handle = "gift-hamper-quantity-validation"
+uid = "a8bb86b6-b838-b072-7aa1-09333a335cf155345155"
 type = "function"
 
 description = "t:description"

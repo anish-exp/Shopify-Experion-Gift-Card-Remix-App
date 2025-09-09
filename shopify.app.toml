@@ -3,11 +3,10 @@
 client_id = "a3ddc94d5af878a08c14ca885bb1c972"
 name = "Gift Card App"
 handle = "gift-card-app-38"
-application_url = "https://intermediate-proteins-counted-belfast.trycloudflare.com"
+application_url = "https://task-vcr-prominent-payday.trycloudflare.com"
 embedded = true
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
 
 [webhooks]
@@ -35,9 +34,9 @@ scopes = "read_products, write_products, write_gift_cards, read_customers, read_
 
 [auth]
 redirect_urls = [
-  "https://intermediate-proteins-counted-belfast.trycloudflare.com/auth/callback",
-  "https://intermediate-proteins-counted-belfast.trycloudflare.com/auth/shopify/callback",
-  "https://intermediate-proteins-counted-belfast.trycloudflare.com/api/auth/callback"
+  "https://task-vcr-prominent-payday.trycloudflare.com/auth/callback",
+  "https://task-vcr-prominent-payday.trycloudflare.com/auth/shopify/callback",
+  "https://task-vcr-prominent-payday.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
@@ -46,4 +45,4 @@ embedded = false
 [app_proxy]
 prefix = "apps"
 subpath = "gift-card"
-url = "https://intermediate-proteins-counted-belfast.trycloudflare.com/api/giftcard"
+url = "https://task-vcr-prominent-payday.trycloudflare.com/api/giftcard"
