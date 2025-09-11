@@ -34,9 +34,9 @@ export default function App() {
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <NavMenu>
-        <Link to={isConfigComplete ? "/app" : "/app/configuration"} rel="home">
+        {isConfigComplete && (<Link to="/app" rel="home">
           Home
-        </Link>
+        </Link>)}
         <Link to="/app/configuration">Configuration</Link>
         <Link to="/app/pricing">Pricing</Link>
       </NavMenu>
