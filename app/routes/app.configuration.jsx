@@ -3,6 +3,7 @@ import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { useLoaderData } from "@remix-run/react";
 import { useState } from "react";
+import { getSetupProgress, updateSetupProgress } from "../utils/helper";
 import {
   Page,
   Layout,
@@ -14,28 +15,50 @@ import {
   List,
   Card,
   Link,
+  Icon
 } from "@shopify/polaris";
+import { StatusActiveIcon } from '@shopify/polaris-icons';
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const storeSlug = shop?.replace(".myshopify.com", "") || "";
   const redirectionUrl = `https://admin.shopify.com/store/${storeSlug}`;
-  return json({ redirectionUrl });
+  const progress = await getSetupProgress(shop);
+  return json({ redirectionUrl, progress });
+}
+
+export const action = async ({ request }) => {
+  const { session } = await authenticate.admin(request);
+  const shop = session.shop;
+  const formData = await request.formData();
+  const step = formData.get("step");
+
+  await updateSetupProgress(shop, step);
+  return null;
 }
 
 export default function AppSetup() {
-  const { redirectionUrl } = useLoaderData();
-  const [steps, setSteps] = useState([false, false, false, false]);
-  const completedSteps = steps.filter(Boolean).length;
-  const progress = (completedSteps / steps.length) * 100;
+  const { redirectionUrl, progress } = useLoaderData();
+  const [steps, setSteps] = useState([
+    progress?.appBlockDone || false,
+    progress?.productTypeDone || false,
+    progress?.checkoutRuleDone || false,
+    progress?.collectionDone || false,
+  ]);
 
-  const handleStepClick = (index) => {
+  const completedSteps = steps.filter(Boolean).length;
+  const progressPercent = (completedSteps / steps.length) * 100;
+
+  const handleStepClick = (index, step) => {
     setSteps((prev) => {
       const updated = [...prev];
       updated[index] = true;
       return updated;
     });
+
+    const form = document.getElementById(`form-${step}`);
+    if (form) form.submit();
   };
   return (
     <Page>
@@ -44,34 +67,71 @@ export default function AppSetup() {
         <Layout.Section>
           <BlockStack gap="200">
             <Text variant="headingXl" as="h1">
-              Gift Card & Hamper Configuration
+              Gift Cards & Hamper Configuration
             </Text>
             <Text as="p" tone="subdued">
               Configure your store to enable custom gift cards and hampers with flexible amount selection
             </Text>
 
             {/* Custom Progress Bar */}
-            <Box paddingBlockStart="200">
+            <Box paddingBlockStart="200" paddingBlockEnd="200">
               <InlineStack align="space-between" blockAlign="center">
-                <Text as="span" tone="subdued" fontWeight="medium">
-                  Setup {completedSteps}/4
-                </Text>
-                <Box style={{ flex: 1, marginLeft: 16 }}>
-                  <div style={{
-                    height: 8,
-                    borderRadius: 50,
-                    background: "#e0e0e0",
-                    overflow: "hidden"
-                  }}>
+                <InlineStack gap="800" blockAlign="center">
+                  {completedSteps === 4 ? (
+                    <InlineStack gap="200" blockAlign="center">
+                      <Icon source={StatusActiveIcon} tone="success" />
+                      <Text as="span" tone="success" fontWeight="semibold">
+                        Basic configuration complete...!
+                      </Text>
+                    </InlineStack>
+                  ) : (
+                    <Box>
+                      <Text as="span" fontWeight="medium">
+                        Basic configuration
+                      </Text>
+                      <Text as="span" tone="subdued"> {completedSteps}/4 completed</Text>
+                    </Box>
+                  )}
+
+                  {completedSteps === 4 && (
+                    <Button url="/app/" primary>
+                      Configure Gift Cards
+                    </Button>
+                  )}
+                </InlineStack>
+
+                {completedSteps < 4 && (
+                  <Box style={{ flex: 1, marginLeft: 16 }}>
                     <div style={{
-                      width: `${progress}%`,
-                      height: "100%",
-                      background: "#404040",
-                      transition: "width 0.3s"
-                    }} />
-                  </div>
-                </Box>
+                      height: 8,
+                      borderRadius: 50,
+                      background: "#e0e0e0",
+                      overflow: "hidden"
+                    }}>
+                      <div style={{
+                        width: `${progressPercent}%`,
+                        height: "100%",
+                        background: "#0097e3",
+                        transition: "width 0.5s ease-in-out"
+                      }} />
+                    </div>
+                  </Box>
+                )}
               </InlineStack>
+
+              {completedSteps === 4 ? (
+                <Box paddingBlockStart="100">
+                  <Text as="p" tone="success" alignment="start">
+                    You can now customize gift card & hamper settings to match your store's needs.
+                  </Text>
+                </Box>
+              ) : (
+                <Box paddingBlockStart="100">
+                  <Text as="p" tone="subdued" alignment="start">
+                    Complete these essential steps to enable gift cards and hampers functionality.
+                  </Text>
+                </Box>
+              )}
             </Box>
           </BlockStack>
         </Layout.Section>
@@ -108,11 +168,15 @@ export default function AppSetup() {
                       </List>
 
                       <InlineStack>
-                        <Button url={`${redirectionUrl}/themes/current/editor?template=product`}
-                          onClick={() => handleStepClick(0)}
+                        <form method="post" id="form-appBlockDone">
+                          <input type="hidden" name="step" value="appBlockDone" />
+                        </form>
+                        <Button
+                          url={`${redirectionUrl}/themes/current/editor?template=product`}
+                          onClick={() => handleStepClick(0, "appBlockDone")}
                           target="_blank" external primary
                         >
-                          Go to Blog Theme Editor
+                          Go to Theme Editor
                         </Button>
                       </InlineStack>
                     </BlockStack>
@@ -163,8 +227,12 @@ export default function AppSetup() {
                       </Box>
 
                       <InlineStack>
-                        <Button url={`${redirectionUrl}/products`}
-                          onClick={() => handleStepClick(1)}
+                        <form method="post" id="form-productTypeDone">
+                          <input type="hidden" name="step" value="productTypeDone" />
+                        </form>
+                        <Button
+                          url={`${redirectionUrl}/products`}
+                          onClick={() => handleStepClick(1, "productTypeDone")}
                           target="_blank" external primary
                         >
                           Manage Products
@@ -203,8 +271,12 @@ export default function AppSetup() {
                       </List>
 
                       <InlineStack>
-                        <Button url={`${redirectionUrl}/settings/checkout`}
-                          onClick={() => handleStepClick(2)}
+                        <form method="post" id="form-checkoutRuleDone">
+                          <input type="hidden" name="step" value="checkoutRuleDone" />
+                        </form>
+                        <Button
+                          url={`${redirectionUrl}/settings/checkout`}
+                          onClick={() => handleStepClick(2, "checkoutRuleDone")}
                           target="_blank" external primary
                         >
                           Configure Checkout Rule
@@ -250,8 +322,12 @@ export default function AppSetup() {
                       </Text>
 
                       <InlineStack>
-                        <Button url={`${redirectionUrl}/collections`}
-                          onClick={() => handleStepClick(3)}
+                        <form method="post" id="form-collectionDone">
+                          <input type="hidden" name="step" value="collectionDone" />
+                        </form>
+                        <Button
+                          url={`${redirectionUrl}/collections`}
+                          onClick={() => handleStepClick(3, "collectionDone")}
                           target="_blank" external primary
                         >
                           Setup Collections

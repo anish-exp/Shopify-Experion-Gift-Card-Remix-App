@@ -4,32 +4,47 @@ import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
+import { getSetupProgress } from "../utils/helper";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  const { session, redirect } = await authenticate.admin(request);
+  const shop = session.shop;
 
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+
+  const progress = await getSetupProgress(shop);
+  const isConfigComplete = progress?.isComplete || false;
+
+  if (!isConfigComplete && pathname === "/app") {
+    return redirect("/app/configuration");
+  }
+
+  return {
+    apiKey: process.env.SHOPIFY_API_KEY,
+    isConfigComplete,
+  };
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData();
+  const { apiKey, isConfigComplete } = useLoaderData();
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <NavMenu>
-        <Link to="/app" rel="home">
+        {isConfigComplete && (<Link to="/app" rel="home">
           Home
-        </Link>
+        </Link>)}
         <Link to="/app/configuration">Configuration</Link>
+        <Link to="/app/pricing">Pricing</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>
   );
 }
 
-// Shopify needs Remix to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
   return boundary.error(useRouteError());
 }
