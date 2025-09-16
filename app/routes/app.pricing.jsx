@@ -11,14 +11,13 @@ import {
   Layout,
   InlineStack,
   Divider,
+  Banner
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { CheckIcon, XIcon } from "@shopify/polaris-icons";
-
-const PAID_PRICING = {
-  monthly: { price: "$19", period: "month" },
-  annual: { price: "$190", period: "year", savings: "Save 17%" },
-};
+import { authenticate, MONTHLY_PLAN, ANNUAL_PLAN } from "../shopify.server";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 const FEATURES = [
   {
@@ -51,40 +50,70 @@ const FEATURES = [
   },
 ];
 
+export async function loader({ request }) {
+  const { billing } = await authenticate.admin(request);
+
+  try {
+    // Attempt to check if the shop has an active payment for any plan
+    const billingCheck = await billing.require({
+      plans: [MONTHLY_PLAN, ANNUAL_PLAN],
+      isTest: process.env.NODE_ENV !== "production",
+      onFailure: () => {
+        throw new Error('No active paid plan');
+      },
+    });
+
+    const subscription = billingCheck.appSubscriptions[0];
+    console.log(`Shop is on ${subscription.name} (id ${subscription.id})`);
+    return json({ plan: subscription });
+
+  } catch (error) {
+    if (error.message === 'No active paid plan') {
+      console.log('Shop does not have any active paid plans.');
+      return json({ billing, plan: { name: "Basic Plan" } });
+    }
+    throw error;
+  }
+}
+
 export default function Pricing() {
+  const { plan } = useLoaderData();
+  console.log('plan', plan);
+
   const plans = [
     {
-      name: "Starter",
-      subtitle: "Perfect for testing the waters",
-      price: "Free for 14 days",
+      name: "Basic Plan",
+      subtitle: "Get started with basic features for free",
+      price: "Free",
       features: [true, true, true, true, true, false, false],
-      action: "Start Free Trial",
-      planId: "trial",
-      isTrial: true,
+      action: "Start For Free",
+      url: "/app/cancel",
+      planId: "free",
+      isFree: true,
       highlight: "No credit card required",
     },
     {
-      name: "Professional",
-      subtitle: "For growing businesses",
-      price: `${PAID_PRICING.monthly.price}/month`,
+      name: "Monthly Plan",
+      subtitle: "Unlock all features with monthly billing",
+      price: "$19/month",
       features: [true, true, true, true, true, true, true],
-      action: "Choose Monthly",
+      action: "Start Monthly Plan",
+      url: "/app/upgrade?plan=monthly",
       planId: "monthly",
     },
     {
-      name: "Enterprise",
-      subtitle: "For high-volume stores",
-      price: `${PAID_PRICING.annual.price}/year`,
+      name: "Annual Plan",
+      subtitle: "Save more with annual billing",
+      price: "$190/year",
       features: [true, true, true, true, true, true, true],
-      action: "Choose Annual",
+      action: "Start Annual Plan",
+      url: "/app/upgrade?plan=annual",
       planId: "annual",
-      highlight: PAID_PRICING.annual.savings,
+      highlight: "Save 17%",
     },
   ];
 
-  const handleSelectPlan = (planId) => {
-    alert(`Selected plan: ${planId}`);
-  };
+  const currentPlanName = (plan?.name === "Monthly Plan" || plan?.name === "Annual Plan") ? plan.name : "Basic Plan";
 
   return (
     <Page>
@@ -93,95 +122,131 @@ export default function Pricing() {
         <Layout.Section>
           <BlockStack gap="400">
             <Text variant="headingXl" as="h1">
-              Pricing Plan
+              Pricing Plans
             </Text>
+
             <Text as="p" variant="bodyMd" alignment="center">
-              Select the plan that works best for your business. The trial plan include a 14-day
-              free trial with no commitment.
+              Select the plan that works best for your business. The paid plans include a 14-day free trial.
             </Text>
           </BlockStack>
-          <InlineStack gap="400" wrap align="center" blockAlign="start">
-            {plans.map((plan) => (
-              <Box key={plan.planId} minWidth="280px" maxWidth="340px" flex="1">
-                <Card padding="400">
-                  <BlockStack gap="400">
-                    {/* Title & Subtitle */}
+
+          <Box paddingBlockStart="400" paddingBlockEnd="400">
+            <Banner title="Your Current Subscription" tone="info">
+              <InlineStack align="space-between" blockAlign="center">
+                {currentPlanName === "Basic Plan" ? (
+                  <Text>You're currently on the <b>Basic plan</b>. Upgrade to unlock premium features.</Text>
+                ) : (
+                  <Text>You're currently on the <b>{currentPlanName}</b>. All features are unlocked.</Text>
+                )}
+                {currentPlanName !== "Basic Plan" && (
+                  <Button url="/app/cancel">Cancel plan</Button>
+                )}
+              </InlineStack>
+            </Banner>
+          </Box>
+
+          <InlineStack gap="200" wrap={false} align="stretch">
+            {plans.map((plan_item) => (
+              <Box key={plan_item.planId} width="33.333%">
+                <Card>
+                  <BlockStack gap="200">
                     <BlockStack gap="200">
-                      <Text variant="headingLg" as="h2">
-                        {plan.name}
-                      </Text>
-                      {plan.subtitle && (
+                      <InlineStack align="space-between" blockAlign="center">                  
+                        <Text variant="headingLg" as="h2">
+                          {plan_item.name}
+                        </Text>
+                        {plan_item.highlight && (
+                          <Badge tone="info" size="small">
+                            {plan_item.highlight}
+                          </Badge>
+                        )}
+                      </InlineStack>
+
+                      {plan_item.subtitle && (
                         <Text variant="bodySm" as="p" tone="subdued">
-                          {plan.subtitle}
+                          {plan_item.subtitle}
                         </Text>
                       )}
                     </BlockStack>
 
-                    {/* Price */}
-                    <Text variant="headingXl" as="p">
-                      {plan.price}
+                    <Text variant="headingXl" as="h1">
+                      {plan_item.price}
                     </Text>
 
-                    {/* Highlight badge */}
-                    {plan.highlight && (
-                      <Badge tone="info" size="small">
-                        {plan.highlight}
-                      </Badge>
-                    )}
-
-                    {/* CTA button */}
-                    <Button
-                      variant="primary"
-                      onClick={() => handleSelectPlan(plan.planId)}
-                      fullWidth
-                    >
-                      {plan.action}
-                    </Button>
-
-                    <Divider />
-
-                    {/* Features */}
                     <BlockStack gap="200">
-                      <Text variant="headingSm" as="h3">
+                      <Text variant="headingMd" as="h1">
                         Features:
                       </Text>
-                      <BlockStack gap="200">
+                      <BlockStack gap="300">
                         {FEATURES.map((feature, fIdx) => (
-                          <InlineStack
-                            key={fIdx}
-                            gap="200"
-                            blockAlign="start"
-                            align="start"
-                          >
-                            <Icon
-                              source={plan.features[fIdx] ? CheckIcon : XIcon}
-                              tone={plan.features[fIdx] ? "success" : "critical"}
-                            />
-                            <Tooltip content={feature.description}>
-                              <Text
-                                as="span"
-                                tone={plan.features[fIdx] ? "base" : "subdued"}
-                              >
-                                {feature.label}
-                              </Text>
-                            </Tooltip>
+                          <InlineStack key={fIdx} gap="200">
+                            <Box minWidth="20px">
+                              <Icon
+                                source={plan_item.features[fIdx] ? CheckIcon : XIcon}
+                                tone={plan_item.features[fIdx] ? "success" : "critical"}
+                              />
+                            </Box>
+                            <Box>
+                              <Tooltip content={feature.description}>
+                                <Text
+                                  as="span"
+                                  tone={plan_item.features[fIdx] ? "base" : "subdued"}
+                                >
+                                  {feature.label}
+                                </Text>
+                              </Tooltip>
+                            </Box>
                           </InlineStack>
                         ))}
                       </BlockStack>
                     </BlockStack>
 
-                    {/* Trial note */}
-                    {plan.isTrial && (
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Upgrade to a paid plan to unlock gift hampers and priority support
-                        features.
-                      </Text>
-                    )}
+                    <BlockStack gap="300">
+                      <Divider />
+
+                      {plan_item.name === currentPlanName ? (
+                        <Button disabled>Current Plan</Button>
+                      ) : (
+                        <Button variant="primary" url={plan_item.url}>
+                          {plan_item.action}
+                        </Button>
+                      )}
+
+                      {plan_item.isFree && (
+                        <Box minHeight="1.8rem">
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            Upgrade to a paid plan to unlock gift hampers and priority support
+                            features.
+                          </Text>
+                        </Box>
+                      )}
+                      {!plan_item.isFree && (
+                        <Box minHeight="1.8rem" />
+                      )}
+                    </BlockStack>
                   </BlockStack>
                 </Card>
               </Box>
             ))}
           </InlineStack>
+
+          <Box paddingBlockStart="500">
+            <Card>
+              <BlockStack gap="300" align="center">
+                <Text variant="headingMd" as="h2" alignment="center">
+                  Need assistance?
+                </Text>
+                <Text as="p" tone="subdued" alignment="center">
+                  If you face any issues with the pricing plan, our team is here to help.
+                </Text>
+                <InlineStack align="center">
+                  <Button url="mailto:anish.s@experionglobal.com" target="_blank" external primary>
+                    Contact Support
+                  </Button>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Box>
         </Layout.Section>
       </Layout>
     </Page>
