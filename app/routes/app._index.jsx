@@ -21,12 +21,12 @@ import { ToggleOffIcon, ToggleOnIcon, InfoIcon } from '@shopify/polaris-icons';
 import { TitleBar } from "@shopify/app-bridge-react";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
-import { authenticate } from "../shopify.server";
+import { authenticate, MONTHLY_PLAN, ANNUAL_PLAN } from "../shopify.server";
 import { useState, useEffect } from "react";
 import { METAFIELDS_SET_MUTATION, SHOP_SETTINGS_QUERY } from "../utils/graphql";
 
 export const loader = async ({ request }) => {
-  const { admin } = await authenticate.admin(request);
+  const { admin, billing } = await authenticate.admin(request);
 
   const settingsResponse = await admin.graphql(SHOP_SETTINGS_QUERY);
 
@@ -60,10 +60,26 @@ export const loader = async ({ request }) => {
       }
     }
   });
+
+  // Check current billing plan
+  let planName = "Basic Plan";
+  try {
+    const billingCheck = await billing.check({
+      plans: [MONTHLY_PLAN, ANNUAL_PLAN],
+      isTest: process.env.NODE_ENV !== "production",
+    });
+    if (billingCheck?.appSubscriptions?.length > 0) {
+      planName = billingCheck.appSubscriptions[0].name;
+    }
+  } catch (e) {
+    planName = "Basic Plan";
+  }
+
   return json({
     shopId: settingsData.data.shop.id,
     currencyCode: settingsData.data.shop.currencyCode,
     settings,
+    planName
   });
 };
 
@@ -182,8 +198,9 @@ export const action = async ({ request }) => {
 };
 
 export default function GiftCardSettings() {
-  const { settings, shopId, currencyCode } = useLoaderData();
+  const { settings, shopId, currencyCode, planName } = useLoaderData();
   const saveFetcher = useFetcher();
+  const isPremiumPlan = planName !== "Basic Plan";
 
   const [minAmount, setMinAmount] = useState(settings.min_price);
   const [maxAmount, setMaxAmount] = useState(settings.max_price);
@@ -198,6 +215,14 @@ export default function GiftCardSettings() {
   const [pendingProduct, setPendingProduct] = useState(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [error, setError] = useState(null);
+
+  // Reset hamper if on Basic Plan
+  useEffect(() => {
+    if (!isPremiumPlan) {
+      setPhysicalGiftboxEnabled(false);
+      setPendingProduct(null);
+    }
+  }, [isPremiumPlan]);
 
   useEffect(() => {
     setHasChanges(
@@ -351,8 +376,16 @@ export default function GiftCardSettings() {
             </Box>
           )}
 
+          {!isPremiumPlan && (
+            <Box paddingBlockEnd="400">
+              <Banner title="Upgrade to Unlock More Features" tone="warning">
+                <b>Gift Hamper</b> feature is available only in Premium plans. Please upgrade to unlock this feature.
+              </Banner>
+            </Box>
+          )}
+
           <Card>
-            <BlockStack gap="600">
+            <BlockStack gap="400">
               <Box padding="400" >
                 <InlineStack gap="400" align="space-between" blockAlign="center">
                   <InlineStack gap="300" blockAlign="center">
@@ -417,18 +450,28 @@ export default function GiftCardSettings() {
                       </Box>
 
                       <Box minWidth="280px">
-                        <Card padding="400">
+                        <Card
+                          padding="400"
+                          background={planName === "Basic Plan" ? "bg-surface-disabled" : "bg-surface"}
+                        >
                           <BlockStack gap="300">
                             <InlineStack gap="200" blockAlign="center">
                               <Checkbox
                                 checked={physicalGiftboxEnabled}
                                 onChange={(value) => setPhysicalGiftboxEnabled(value)}
                                 label="Gift Card + Gift Hamper"
+                                disabled={planName === "Basic Plan"}
                               />
-                              {physicalGiftboxEnabled && <Badge tone="success">Active</Badge>}
+                              {planName === "Basic Plan" ? (
+                                <Badge tone="critical">Unavailable</Badge>
+                              ) : (
+                                physicalGiftboxEnabled && <Badge tone="success">Active</Badge>
+                              )}
                             </InlineStack>
                             <Text variant="bodySm" as="p" tone="subdued">
-                              Includes selected product
+                              {planName === "Basic Plan"
+                                ? "Upgrade your plan to include gift hampers"
+                                : "Includes selected product"}
                             </Text>
                           </BlockStack>
                         </Card>
@@ -486,7 +529,7 @@ export default function GiftCardSettings() {
                                 <Icon source={InfoIcon} tone="base" />
                               </Tooltip>
                             </InlineStack>
-                          } 
+                          }
                           type="number"
                           value={minAmount}
                           onChange={(value) => setMinAmount(value.replace(/\D/g, ""))}
@@ -520,9 +563,9 @@ export default function GiftCardSettings() {
                 </Box>
               )}
 
-              {enabled && physicalGiftboxEnabled && <Divider />}
+              {enabled && planName !== "Basic Plan" && physicalGiftboxEnabled && <Divider />}
 
-              {enabled && physicalGiftboxEnabled && (
+              {enabled && planName !== "Basic Plan" && physicalGiftboxEnabled && (
                 <Box padding="400">
                   <BlockStack gap="400">
                     <InlineStack align="space-between" blockAlign="center">
@@ -614,7 +657,7 @@ export default function GiftCardSettings() {
                       isInvalidMinAmount ||
                       isInvalidMaxAmount ||
                       !hasChanges ||
-                      (physicalGiftboxEnabled && displayProduct === null) ||
+                      (isPremiumPlan && physicalGiftboxEnabled && displayProduct === null) ||
                       saveFetcher.state === "submitting" ||
                       isSelectingProduct
                     }

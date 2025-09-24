@@ -174,7 +174,7 @@ export default function AppSetup() {
                         <Button
                           url={`${redirectionUrl}/themes/current/editor?template=product`}
                           onClick={() => handleStepClick(0, "appBlockDone")}
-                          target="_blank" external primary
+                          target="_blank" external="true" primary
                         >
                           Go to Theme Editor
                         </Button>
@@ -233,7 +233,7 @@ export default function AppSetup() {
                         <Button
                           url={`${redirectionUrl}/products`}
                           onClick={() => handleStepClick(1, "productTypeDone")}
-                          target="_blank" external primary
+                          target="_blank" external="true" primary
                         >
                           Manage Products
                         </Button>
@@ -277,7 +277,7 @@ export default function AppSetup() {
                         <Button
                           url={`${redirectionUrl}/settings/checkout`}
                           onClick={() => handleStepClick(2, "checkoutRuleDone")}
-                          target="_blank" external primary
+                          target="_blank" external="true" primary
                         >
                           Configure Checkout Rule
                         </Button>
@@ -328,7 +328,7 @@ export default function AppSetup() {
                         <Button
                           url={`${redirectionUrl}/collections`}
                           onClick={() => handleStepClick(3, "collectionDone")}
-                          target="_blank" external primary
+                          target="_blank" external="true" primary
                         >
                           Setup Collections
                         </Button>
@@ -352,7 +352,7 @@ export default function AppSetup() {
                   If you face any issues with the configuration, our team is here to help.
                 </Text>
                 <InlineStack align="center">
-                  <Button url="mailto:anish.s@experionglobal.com" target="_blank" external primary>
+                  <Button url="mailto:anish.s@experionglobal.com" target="_blank" external="true" primary>
                     Contact Support
                   </Button>
                 </InlineStack>

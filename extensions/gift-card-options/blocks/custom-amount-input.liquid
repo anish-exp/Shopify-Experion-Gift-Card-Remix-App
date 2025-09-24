@@ -29,6 +29,7 @@
   {% assign physical_giftbox_enabled = gift_card_settings.physical_giftbox_enabled.value | default: false %}
   {% assign selected_product = gift_card_settings.selected_product.value.handle %}
   {% assign giftbox = all_products[selected_product] %}
+  {% assign plan_name = gift_card_settings.plan_name.value | default: 'Basic Plan' %}
 
   {% assign default_type = 'digital' %}
   {% if digital_enabled %}
@@ -53,39 +54,43 @@
             Physical
           </button>
         {% endif %}
-        {% if physical_giftbox_enabled and giftbox %}
-          <button
-            class="type-btn {% if default_type == 'physical-giftbox' %}active{% endif %}"
-            data-type="physical-giftbox"
-            {% unless giftbox.variants.first.inventory_quantity > 0 %}
-              disabled aria-disabled="true" style="opacity:0.5; cursor:not-allowed;"
-            {% endunless %}
-          >
-            Physical + Gift hamper
-          </button>
+        {% if plan_name == 'Monthly Plan' or plan_name == 'Annual Plan' %}
+          {% if physical_giftbox_enabled and giftbox %}
+            <button
+              class="type-btn {% if default_type == 'physical-giftbox' %}active{% endif %}"
+              data-type="physical-giftbox"
+              {% unless giftbox.variants.first.inventory_quantity > 0 %}
+                disabled aria-disabled="true" style="opacity:0.5; cursor:not-allowed;"
+              {% endunless %}
+            >
+              Physical + Gift hamper
+            </button>
+          {% endif %}
         {% endif %}
       </div>
 
       <!-- Giftbox Preview -->
-      {% if giftbox %}
-        <div id="giftbox-product" class="giftbox-product">
-          <div class="giftbox-content">
-            <div class="giftbox-header">Gift card exclusive offer <span class="giftbox-badge">popular</span></div>
-            <div class="giftbox-image">
-              {{ giftbox.featured_image | image_url: width: 300 | image_tag: alt: giftbox.title }}
-            </div>
-            <div class="giftbox-description">
-              {{ giftbox.description | strip_html }}
-            </div>
+      {% if plan_name == 'Monthly Plan' or plan_name == 'Annual Plan' %}
+        {% if giftbox %}
+          <div id="giftbox-product" class="giftbox-product">
+            <div class="giftbox-content">
+              <div class="giftbox-header">Gift card exclusive offer <span class="giftbox-badge">popular</span></div>
+              <div class="giftbox-image">
+                {{ giftbox.featured_image | image_url: width: 300 | image_tag: alt: giftbox.title }}
+              </div>
+              <div class="giftbox-description">
+                {{ giftbox.description | strip_html }}
+              </div>
 
-            <div class="giftbox-price">
-              {{ giftbox.price | money }}
-            </div>
-            <div class="giftbox-title">
-              {{ giftbox.title }}
+              <div class="giftbox-price">
+                {{ giftbox.price | money }}
+              </div>
+              <div class="giftbox-title">
+                {{ giftbox.title }}
+              </div>
             </div>
           </div>
-        </div>
+        {% endif %}
       {% endif %}
 
       <!-- Custom Amount Input -->
@@ -271,7 +276,7 @@
         };
 
         const createGiftCardVariant = async (amount, type) => {
-          const res = await fetch(`/apps/gift-card`, {
+          const res = await fetch(`/apps/gift-card/giftcard`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: amount.toFixed(2), type, productTitle, productHandle })
