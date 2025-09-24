@@ -28,6 +28,10 @@ api_version = "2025-07"
   topics = [ "products/create", "products/update" ]
   uri = "/webhooks/app/hide_gift_hamper_product"
 
+  [[webhooks.subscriptions]]
+  topics = [ "app_subscriptions/update" ]
+  uri = "/webhooks/app/app_subscriptions_update"
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_products, write_products, write_gift_cards, read_customers, read_orders, write_orders"
@@ -45,4 +49,4 @@ embedded = false
 [app_proxy]
 prefix = "apps"
 subpath = "gift-card"
-url = "https://task-vcr-prominent-payday.trycloudflare.com/api/giftcard"
+url = "https://task-vcr-prominent-payday.trycloudflare.com/api"

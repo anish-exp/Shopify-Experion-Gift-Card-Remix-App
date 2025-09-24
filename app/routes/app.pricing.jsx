@@ -64,8 +64,22 @@ export async function loader({ request }) {
     });
 
     const subscription = billingCheck.appSubscriptions[0];
+    const trialDays = subscription.trialDays;
+    const createdAt = subscription.createdAt;
+    const now = new Date();
+    const trialEndDate = new Date(createdAt);
+    trialEndDate.setDate(trialEndDate.getDate() + trialDays);
+
+    const diffTime = trialEndDate.getTime() - now.getTime();
+    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const isTrial = daysLeft > 0;
     console.log(`Shop is on ${subscription.name} (id ${subscription.id})`);
-    return json({ plan: subscription });
+
+    return json({
+      plan: subscription,
+      isTrial,
+      daysLeft
+    });
 
   } catch (error) {
     if (error.message === 'No active paid plan') {
@@ -77,8 +91,7 @@ export async function loader({ request }) {
 }
 
 export default function Pricing() {
-  const { plan } = useLoaderData();
-  console.log('plan', plan);
+  const { plan, isTrial, daysLeft } = useLoaderData();
 
   const plans = [
     {
@@ -136,7 +149,12 @@ export default function Pricing() {
                 {currentPlanName === "Basic Plan" ? (
                   <Text>You're currently on the <b>Basic plan</b>. Upgrade to unlock premium features.</Text>
                 ) : (
-                  <Text>You're currently on the <b>{currentPlanName}</b>. All features are unlocked.</Text>
+                  <Text>
+                    You're currently on the <b>{currentPlanName}</b>. All features are unlocked.
+                    {isTrial && (
+                      <span> Your free trial ends in {daysLeft} day{daysLeft > 1 ? 's' : ''}.</span>
+                    )}
+                  </Text>
                 )}
                 {currentPlanName !== "Basic Plan" && (
                   <Button url="/app/cancel">Cancel plan</Button>
@@ -151,7 +169,7 @@ export default function Pricing() {
                 <Card>
                   <BlockStack gap="200">
                     <BlockStack gap="200">
-                      <InlineStack align="space-between" blockAlign="center">                  
+                      <InlineStack align="space-between" blockAlign="center">
                         <Text variant="headingLg" as="h2">
                           {plan_item.name}
                         </Text>
@@ -240,7 +258,7 @@ export default function Pricing() {
                   If you face any issues with the pricing plan, our team is here to help.
                 </Text>
                 <InlineStack align="center">
-                  <Button url="mailto:anish.s@experionglobal.com" target="_blank" external primary>
+                  <Button url="mailto:anish.s@experionglobal.com" target="_blank" external="true" primary>
                     Contact Support
                   </Button>
                 </InlineStack>

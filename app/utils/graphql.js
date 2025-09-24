@@ -244,3 +244,17 @@ export const GIFT_CARD_CODE_CREATE_MUTATION = `#graphql
     }
   }
 `;
+
+export const ACTIVE_SUBSCRIPTIONS_QUERY = `#graphql
+  query {
+    currentAppInstallation {
+      activeSubscriptions {
+        name
+        status
+      }
+    }
+    shop {
+      id
+    }
+  }
+`;
