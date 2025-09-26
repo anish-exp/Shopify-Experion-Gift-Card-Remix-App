@@ -7,6 +7,7 @@ import {
 } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
+import { ACTIVE_SUBSCRIPTIONS_QUERY, METAFIELDS_SET_MUTATION } from "./utils/graphql";
 
 export const MONTHLY_PLAN = 'Monthly Plan';
 export const ANNUAL_PLAN = 'Annual Plan';
@@ -40,6 +41,41 @@ const shopify = shopifyApp({
       interval: BillingInterval.Annual,
       trialDays: 14,
     },
+  },
+  hooks: {
+    afterAuth: async ({ admin }) => {
+      try {
+        const response = await admin.graphql(ACTIVE_SUBSCRIPTIONS_QUERY);
+        const result = await response.json();
+
+        const shopId = result?.data?.shop?.id;
+        const activeSubs = result?.data?.currentAppInstallation?.activeSubscriptions || [];
+
+        let planName = "Basic Plan";
+        if (Array.isArray(activeSubs) && activeSubs.length > 0) {
+          planName = activeSubs[0].name || "Basic Plan";
+        }
+
+        const metafieldResponse = await admin.graphql(METAFIELDS_SET_MUTATION, {
+          variables: {
+            metafields: [
+              {
+                namespace: "gift_card_settings",
+                key: "plan_name",
+                type: "single_line_text_field",
+                value: planName,
+                ownerId: shopId,
+              }
+            ]
+          }
+        });
+        const metafieldResult = await metafieldResponse.json();
+        console.log("Metafield set result:", metafieldResult.data.metafieldsSet.metafields);
+
+      } catch (err) {
+        console.error("afterAuth error:", err);
+      }
+    }
   }
 });
 
